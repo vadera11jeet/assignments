@@ -39,11 +39,109 @@
 
   Testing the server - run `npm run test-todoServer` command in terminal
  */
-  const express = require('express');
-  const bodyParser = require('body-parser');
-  
-  const app = express();
-  
-  app.use(bodyParser.json());
-  
-  module.exports = app;
+const express = require("express");
+const bodyParser = require("body-parser");
+const fs = require("fs");
+const app = express();
+const port = 3000;
+
+app.use(bodyParser.json());
+
+function getItem(data, id) {
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].id == id) {
+      return data[i];
+    }
+  }
+  return -1;
+}
+
+app.get("/todos", function (req, res) {
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    return res.status(200).json(JSON.parse(data));
+  });
+});
+
+app.get("/todos/:itemId", function (req, res) {
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    data = JSON.parse(data);
+    item = getItem(data, req.params.itemId);
+    if (item == -1) return res.status(404).send();
+    return res.status(200).json(item);
+  });
+});
+
+app.post("/todos", function (req, res) {
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    data = JSON.parse(data);
+    let newItemId = 1;
+    if (data.length) {
+      newItemId = data[data.length - 1].id + 1;
+    }
+    const newItem = {
+      id: newItemId,
+      title: req.body.title,
+      description: req.body.description,
+    };
+    data.push(newItem);
+    fs.writeFile("todos.json", JSON.stringify(data), (err) => {
+      if (err) throw err;
+    });
+    console.log(newItem);
+    res.status(201).json(newItem);
+  });
+});
+
+app.put("/todos/:itemId", function (req, res) {
+  let itemId = parseInt(req.params.itemId);
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+
+    data = JSON.parse(data);
+    item = getItem(data, itemId);
+    if (item == -1) return res.status(404).send();
+    
+    const updatedTodo = {
+      id: data[itemId].id,
+      title: req.body.title,
+      description: req.body.description,
+    };
+    data[itemId] = updatedTodo;
+    console.log(data);
+    fs.writeFile("todos.json", JSON.stringify(data), (err) => {
+      if (err) throw err;
+      res.status(200).send(updatedTodo);
+    });
+  });
+});
+
+app.delete("/todos/:itemId", function (req, res) {
+  itemId = parseInt(req.params.itemId);
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    data = JSON.parse(data);
+    item = getItem(data, itemId);
+    if (item == -1) return res.status(404).send();
+    let newList = [];
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].id != itemId) {
+        newList.push(data[i]);
+      }
+    }
+    fs.writeFile("todos.json", JSON.stringify(newList), (err) => {
+      if (err) throw err;
+      res.status(200).json();
+    });
+  });
+});
+
+app.listen(port, function () {
+  console.log(`Example app listening on port ${port}`);
+});
+
+// for all other routes, return 404
+app.use((req, res, next) => {
+  res.status(404).send();
+});
+module.exports = app;

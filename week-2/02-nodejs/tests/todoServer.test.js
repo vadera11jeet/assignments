@@ -85,6 +85,7 @@ describe('Todo API', () => {
 
       res.on('end', () => {
         const todo = JSON.parse(data);
+        console.log('Parsed Todo:', todo);
         expect(todo.id).toBe(createdTodoId);
         done();
       });
